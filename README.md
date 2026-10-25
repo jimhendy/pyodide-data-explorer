@@ -230,6 +230,25 @@ The threat is "attacker gets code run in a victim's browser on this origin".
 `Content-Security-Policy` for `/`, `/index.html` and `/sandbox.html` exactly as
 given, or the sandbox guarantees are lost. Use HTTPS in production.
 
+### Self-hosting with Docker and a Cloudflare tunnel
+
+`docker compose up -d --build` builds the site and serves it with nginx
+(`Dockerfile`, `deploy/`). The nginx config is generated from the header rules
+in `build.py` by `deploy/nginx_conf.py`, so the CSP can't drift. A `tunnel`
+service publishes it through Cloudflare without opening ports.
+
+1. In Cloudflare Zero Trust, create a tunnel and add a public hostname, e.g.
+   `data-browser.example.com` -> `http://web:80`.
+2. `cp .env.example .env`, then set `TUNNEL_TOKEN` and `SITE_PASSWORD`.
+3. `docker compose up -d --build`. Check locally at http://localhost:8077.
+
+`SITE_PASSWORD` is one shared password, asked for with HTTP Basic auth (any
+username works) and checked by `deploy/auth.js`. It keeps out bots and the
+curious; it doesn't protect data, which never reaches the server anyway.
+`sandbox.html` and `sandbox.js` are exempt: the sandbox has an opaque origin,
+so the browser may not send the password with its requests, and they contain
+only the public app code.
+
 ## Tests
 
 ```bash

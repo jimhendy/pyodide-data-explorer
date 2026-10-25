@@ -1,6 +1,9 @@
 """Browser test harness: builds dist/, serves it with production headers and
 drives the real app in headless Chrome via Playwright.
 
+To test a deployed copy instead, set EXPLORER_URL (and EXPLORER_PASSWORD if the
+site asks for one), e.g. EXPLORER_URL=https://data-browser.example.com.
+
 Note: the app's CSP forbids eval, so Playwright's wait_for_function (which
 uses it) can't be used; App.wait polls with page.evaluate instead.
 """
@@ -28,6 +31,9 @@ def free_port():
 
 @pytest.fixture(scope="session")
 def server():
+    if os.environ.get("EXPLORER_URL"):
+        yield {"base": os.environ["EXPLORER_URL"].rstrip("/"), "port": None}
+        return
     subprocess.run([sys.executable, "build.py"], cwd=ROOT, check=True, stdout=subprocess.DEVNULL)
     port = free_port()
     proc = subprocess.Popen([sys.executable, "serve.py", "--port", str(port), "--host", "127.0.0.1"], cwd=ROOT,
@@ -50,6 +56,9 @@ def browser_ctx(tmp_path_factory):
         ctx = p.chromium.launch_persistent_context(
             str(tmp_path_factory.mktemp("profile")), channel="chrome", headless=True,
             viewport={"width": 1280, "height": 900},
+            # any username: the deployed site checks only the password
+            http_credentials={"username": "test", "password": os.environ["EXPLORER_PASSWORD"]}
+            if os.environ.get("EXPLORER_PASSWORD") else None,
         )
         yield ctx
         ctx.close()

@@ -1,0 +1,40 @@
+# Limits the damage if a container is compromised: no writes outside /tmp, no
+# Linux capabilities, and caps on memory and processes.
+x-hardened: &hardened
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  pids_limit: 256
+  mem_limit: 256m
+  # Logs go to the system journal, so they survive the container being recreated.
+  logging:
+    driver: journald
+
+services:
+  web:
+    <<: *hardened
+    build: .
+    restart: unless-stopped
+    # nginx starts as root to bind port 80, then drops to the nginx user.
+    cap_add: [CHOWN, SETUID, SETGID, NET_BIND_SERVICE]
+    tmpfs: [/tmp, /var/cache/nginx, /var/run]
+    environment:
+      SITE_PASSWORD: ${SITE_PASSWORD:?set SITE_PASSWORD in .env}  # one shared password for the whole site
+    ports:
+      - "127.0.0.1:8077:80"              # this machine only: http://localhost:8077
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 5s
+
+  # Cloudflare Tunnel: serves https://data-browser.jimhendy.com without opening ports.
+  # Public hostname in the Cloudflare dashboard: data-browser.jimhendy.com -> http://web:80
+  tunnel:
+    <<: *hardened
+    image: cloudflare/cloudflared:2026.10.1
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}     # from the Zero Trust dashboard, kept in .env
+    depends_on:
+      - web

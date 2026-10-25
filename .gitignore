@@ -5,3 +5,4 @@ __pycache__/
 tests/large/
 tests/e2e/artifacts/
 *.pyc
+.env
