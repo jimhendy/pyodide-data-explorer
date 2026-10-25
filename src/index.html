@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Data Explorer</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="vendor/plotly.css">
+<!-- Tells Plotly not to inject inline styles (blocked by our CSP); vendor/plotly.css provides them. -->
+<style id="plotly.js-style-global" class="no-inline-styles"></style>
+</head>
+<body>
+<svg class="icon-defs" aria-hidden="true">
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15V3m0 0L7 8m5-5 5 5M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8.5v.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V4m0 16h16M8 16l4-5 3 3 5-7"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4m6-4v4M9 18v4m6-4v4M2 9h4m-4 6h4m12-6h4m-4 6h4"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></symbol>
+  <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8m-4-4v4"/></symbol>
+  <symbol id="i-steps" viewBox="0 0 24 24"><path d="M10 6h10M10 12h10M10 18h10"/><path d="M4 5.5 5.5 4.5V8M4 13.5c0-.8.7-1.5 1.5-1.5S7 12.7 7 13.5 4 16 4 16h3M4 19.5h3"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+  <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 6.1A9.8 9.8 0 0 1 12 6c5 0 9 6 9 6a17 17 0 0 1-2.6 3.2M6.5 7.6C4.3 9.2 3 12 3 12s4 6 9 6a8.6 8.6 0 0 0 4.4-1.2"/><path d="M9.9 10a3 3 0 0 0 4.2 4.2"/></symbol>
+</svg>
+
+<header class="topbar">
+  <div class="brand">
+    <img src="icon.svg" alt="" width="22" height="22">
+    <h1>Data Explorer</h1>
+  </div>
+  <div class="file-info" id="file-info" hidden>
+    <div class="file-text">
+      <div class="file-name" id="file-name"></div>
+      <div class="file-meta" id="file-meta"></div>
+    </div>
+    <div class="file-actions">
+      <button type="button" class="btn small ghost" id="options-btn" hidden>
+        <svg class="icon"><use href="#i-filter"/></svg><span class="label" id="options-label">Columns &amp; filter</span>
+      </button>
+      <button type="button" class="btn small ghost" id="change-file">
+        <svg class="icon"><use href="#i-folder"/></svg><span class="label">Open file</span>
+      </button>
+    </div>
+  </div>
+  <div class="status" id="status" role="status" aria-live="polite">
+    <span class="dot" aria-hidden="true"></span>
+    <span id="status-text">Starting Python…</span>
+  </div>
+  <button type="button" class="btn small danger" id="cancel" hidden>Cancel</button>
+  <button type="button" class="btn small ghost icon-btn" id="theme-btn" data-mode="system" title="Theme: match system" aria-label="Theme: match system">
+    <svg class="icon i-system" aria-hidden="true"><use href="#i-monitor"/></svg>
+    <svg class="icon i-light" aria-hidden="true"><use href="#i-sun"/></svg>
+    <svg class="icon i-dark" aria-hidden="true"><use href="#i-moon"/></svg>
+  </button>
+</header>
+
+<div class="notice" id="sample-note" hidden>
+  <svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>
+  <p id="sample-text"></p>
+  <button type="button" class="btn small" id="scan-btn" hidden>Count rows exactly</button>
+</div>
+
+<main>
+  <section class="load-panel" id="load-panel" aria-labelledby="load-title">
+    <div class="load-card">
+      <div class="load-head">
+        <h2 id="load-title">Open a data file</h2>
+        <p class="lede">Explore parquet, HDF5, CSV, Excel and JSON with pandas, entirely in your browser.</p>
+      </div>
+      <div class="dropzone" id="dropzone">
+        <svg class="icon drop-icon" aria-hidden="true"><use href="#i-upload"/></svg>
+        <p class="drop-title"><strong>Drop a file here</strong> <span class="muted">or</span></p>
+        <label class="btn primary file-btn">
+          Choose file
+          <input type="file" id="file-input"
+                 accept=".csv,.tsv,.txt,.parquet,.pq,.parq,.h5,.hdf5,.hdf,.he5,.xlsx,.xlsm,.json,.jsonl,.ndjson">
+        </label>
+        <p class="hint">parquet · h5 / hdf5 · csv / tsv · xlsx · json · jsonl &nbsp;—&nbsp; multi-GB files are sampled</p>
+      </div>
+      <div class="load-settings">
+        <label class="field inline">
+          <span>Memory budget</span>
+          <select id="budget">
+            <option value="50">50 MB</option>
+            <option value="100">100 MB</option>
+            <option value="200">200 MB</option>
+            <option value="500">500 MB</option>
+          </select>
+        </label>
+        <label class="field inline">
+          <span>Index</span>
+          <select id="index-mode">
+            <option value="auto">Auto</option>
+            <option value="first">First column</option>
+            <option value="none">Row numbers</option>
+          </select>
+        </label>
+      </div>
+      <p class="hint settings-hint">Parquet, CSV and JSON lines files let you choose columns and filter rows before loading. Files needing more memory than the budget are sampled from across the whole file (loading briefly uses 3–4× the budget). Auto index keeps a saved index or uses a first column of dates.</p>
+      <div class="key-picker" id="key-picker" hidden>
+        <label class="field">
+          <span id="key-label">Dataset</span>
+          <select id="key-select"></select>
+        </label>
+        <button type="button" class="btn primary" id="key-load">Load</button>
+      </div>
+      <p class="error" id="load-error" hidden></p>
+      <ul class="trust">
+        <li><svg class="icon" aria-hidden="true"><use href="#i-cpu"/></svg>Runs on this device. Files are never uploaded.</li>
+        <li><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>Python is isolated in a sandboxed frame.</li>
+        <li><svg class="icon" aria-hidden="true"><use href="#i-eye-off"/></svg>No cookies, accounts or tracking.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- choosing columns / rows before the first load: the options form is moved here (and into the dialog once data is open) -->
+  <section class="setup-panel" id="setup-panel" hidden aria-labelledby="opt-title"></section>
+
+  <section class="workspace" id="explore" hidden aria-label="Explore">
+    <div class="expr-bar">
+      <label for="expr" class="visually-hidden">Python expression, evaluated against df</label>
+      <div class="expr-input">
+        <span class="expr-prompt" aria-hidden="true">&gt;&gt;&gt;</span>
+        <textarea id="expr" rows="1" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"
+                  placeholder='pandas against df, e.g. df[df.price > 100].describe()   ·   Ctrl/⌘+Enter to run'></textarea>
+      </div>
+      <div class="expr-actions">
+        <button type="button" class="btn primary" id="run" title="Run (Ctrl/⌘ + Enter)">
+          <svg class="icon"><use href="#i-play"/></svg>Run
+        </button>
+        <button type="button" class="btn" id="reset" disabled title="Go back to the loaded data">
+          <svg class="icon"><use href="#i-undo"/></svg><span class="label">Reset</span>
+        </button>
+        <details class="history steps" id="steps">
+          <summary class="btn" title="Expressions applied to the current data"><svg class="icon"><use href="#i-steps"/></svg><span class="label">Steps</span><span class="count" id="steps-count" hidden></span></summary>
+          <div class="history-pop steps-pop">
+            <div class="steps-head">
+              <strong>Applied to the loaded data</strong>
+              <button type="button" class="btn small" id="steps-copy" disabled><svg class="icon"><use href="#i-copy"/></svg>Copy as Python</button>
+            </div>
+            <div class="steps-loaded" id="steps-loaded"></div>
+            <ol id="steps-list"></ol>
+            <p class="hint" id="steps-empty">Nothing applied yet: this is the data as loaded.</p>
+            <p class="hint">Listed: runs that changed <code>df</code>, made a result the view, or defined names (<code>x = …</code>, <code>import</code>). Runs that only look (<code>df.shape</code>, <code>print</code>) aren't. Reset clears the list.</p>
+          </div>
+        </details>
+        <details class="history" id="history">
+          <summary class="btn" title="Expression history"><svg class="icon"><use href="#i-clock"/></svg><span class="label">History</span></summary>
+          <div class="history-pop">
+            <ol id="history-list"></ol>
+            <p class="hint" id="history-empty">Expressions you run appear here. Tap one to edit it; nothing runs until you press Run.</p>
+          </div>
+        </details>
+      </div>
+    </div>
+    <div id="expr-out" class="expr-out" hidden></div>
+
+    <div class="tabbar">
+      <nav class="tabs" role="tablist" aria-label="Views">
+        <button type="button" role="tab" id="tab-btn-table" aria-controls="tab-table" aria-selected="true" data-tab="table">Table</button>
+        <button type="button" role="tab" id="tab-btn-plot" aria-controls="tab-plot" aria-selected="false" data-tab="plot">Plot</button>
+        <button type="button" role="tab" id="tab-btn-columns" aria-controls="tab-columns" aria-selected="false" data-tab="columns">Column stats</button>
+        <button type="button" role="tab" id="tab-btn-overview" aria-controls="tab-overview" aria-selected="false" data-tab="overview">Overview</button>
+      </nav>
+      <p class="view-note" id="view-note"></p>
+    </div>
+
+    <div class="tabpanel" role="tabpanel" id="tab-table" aria-labelledby="tab-btn-table">
+      <div class="toolbar">
+        <div class="segmented" role="radiogroup" aria-label="Rows to show" id="table-mode">
+          <button type="button" role="radio" aria-checked="true" data-mode="head">Head</button>
+          <button type="button" role="radio" aria-checked="false" data-mode="tail">Tail</button>
+          <button type="button" role="radio" aria-checked="false" data-mode="sample">Random</button>
+        </div>
+        <label class="field inline">
+          <span>Rows</span>
+          <select id="table-n">
+            <option>10</option><option selected>50</option><option>100</option><option>500</option><option>1000</option>
+          </select>
+        </label>
+        <button type="button" class="btn small" id="resample" hidden>New sample</button>
+        <div class="col-window">
+          <input type="search" id="col-filter" class="filter" placeholder="Filter columns…" aria-label="Filter columns by name" autocapitalize="off" autocomplete="off" spellcheck="false">
+          <div class="pager">
+            <button type="button" class="btn small icon-btn" id="col-prev" aria-label="Previous columns">‹</button>
+            <span id="col-range" class="hint" aria-live="polite"></span>
+            <button type="button" class="btn small icon-btn" id="col-next" aria-label="Next columns">›</button>
+          </div>
+        </div>
+        <span class="hint push" id="table-note"></span>
+      </div>
+      <div class="table-wrap"><table class="data" id="data-table"></table></div>
+    </div>
+
+    <div class="tabpanel" role="tabpanel" id="tab-plot" aria-labelledby="tab-btn-plot" hidden>
+      <div class="plot-layout">
+        <aside class="plot-side" aria-label="Plot options">
+          <div class="plot-controls">
+            <label class="field"><span>Type</span>
+              <select id="plot-kind">
+                <option value="scatter">Scatter</option>
+                <option value="line">Line</option>
+                <option value="histogram">Histogram</option>
+                <option value="bar">Bar</option>
+                <option value="box">Box</option>
+              </select>
+            </label>
+            <label class="field"><span>X</span><select id="plot-x"></select></label>
+            <div class="field ylist" role="group" aria-labelledby="plot-y-label">
+              <span id="plot-y-label">Y</span>
+              <div id="plot-ys"></div>
+              <button type="button" class="btn small ghost add-y" id="plot-y-add"><svg class="icon"><use href="#i-plus"/></svg>Add Y</button>
+            </div>
+            <label class="field"><span>Colour / group</span><select id="plot-color"></select></label>
+            <label class="field" id="plot-agg-field" hidden><span>Aggregate</span>
+              <select id="plot-agg">
+                <option value="mean">mean</option><option value="sum">sum</option><option value="median">median</option>
+                <option value="min">min</option><option value="max">max</option><option value="count">count</option>
+              </select>
+            </label>
+            <label class="field" id="plot-bins-field" hidden><span>Bins</span><input type="number" id="plot-bins" value="40" min="2" max="500" inputmode="numeric"></label>
+          </div>
+          <button type="button" class="btn primary block" id="plot-draw"><svg class="icon"><use href="#i-chart"/></svg>Draw plot</button>
+          <p class="hint" id="plot-hint"></p>
+        </aside>
+        <div class="plot-main">
+          <div id="plot" class="plot" aria-label="Plot"></div>
+          <p class="hint plot-notes" id="plot-notes"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabpanel" role="tabpanel" id="tab-columns" aria-labelledby="tab-btn-columns" hidden>
+      <div class="toolbar">
+        <div class="col-window">
+          <input type="search" id="stats-filter" class="filter" placeholder="Filter columns…" aria-label="Filter column stats by name" autocapitalize="off" autocomplete="off" spellcheck="false">
+          <div class="pager">
+            <button type="button" class="btn small icon-btn" id="stats-prev" aria-label="Previous columns">‹</button>
+            <span id="stats-range" class="hint" aria-live="polite"></span>
+            <button type="button" class="btn small icon-btn" id="stats-next" aria-label="Next columns">›</button>
+          </div>
+        </div>
+        <span class="hint push" id="col-note"></span>
+      </div>
+      <div class="table-wrap"><table class="data stats" id="col-table"></table></div>
+    </div>
+
+    <div class="tabpanel scroll" role="tabpanel" id="tab-overview" aria-labelledby="tab-btn-overview" hidden>
+      <div id="overview"></div>
+    </div>
+  </section>
+</main>
+
+<dialog class="dialog" id="options-dialog" aria-labelledby="opt-title">
+  <form method="dialog" class="dialog-form" id="options-form">
+    <header class="dialog-head">
+      <div>
+        <h2 id="opt-title">Columns &amp; filter</h2>
+        <p class="hint" id="opt-file"></p>
+      </div>
+      <button type="button" class="btn small ghost icon-btn" id="opt-close" aria-label="Close"><svg class="icon"><use href="#i-x"/></svg></button>
+    </header>
+    <div class="dialog-body">
+      <section class="opt-pane opt-cols" id="opt-cols" aria-labelledby="opt-cols-title">
+        <div class="pane-head">
+          <h3 id="opt-cols-title">Columns</h3>
+          <span class="hint" id="opt-col-count"></span>
+        </div>
+        <div class="chips" id="opt-col-chips" aria-label="Selected columns" aria-live="polite"></div>
+        <div class="pane-tools">
+          <input type="search" id="opt-col-filter" class="filter" placeholder="Search columns…" aria-label="Search columns" autocapitalize="off" autocomplete="off" spellcheck="false">
+          <button type="button" class="btn small" id="opt-col-only" hidden title="Select exactly the columns matching the search">Only these</button>
+          <button type="button" class="btn small" id="opt-col-all">All</button>
+          <button type="button" class="btn small" id="opt-col-none">None</button>
+        </div>
+        <ul class="col-list" id="opt-col-list" aria-label="Columns to load"></ul>
+        <p class="hint" id="opt-col-more"></p>
+        <p class="hint col-tip">Shift-click to tick or untick a range.</p>
+      </section>
+      <section class="opt-pane opt-rows" aria-labelledby="opt-rows-title">
+        <div class="pane-head"><h3 id="opt-rows-title">Rows</h3></div>
+        <div class="opt-rowsel" id="opt-rowsel">
+        <div class="choice-list" role="radiogroup" aria-label="Rows to load">
+          <label class="choice">
+            <input type="radio" name="opt-rows" value="all" checked>
+            <span><strong>All rows</strong><small>Sampled across the file if they don't fit the memory budget</small></span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="opt-rows" value="where">
+            <span><strong>Filter rows</strong><small>An SQL condition, applied while reading, so only matching rows use memory</small></span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="opt-rows" value="sql">
+            <span><strong>SQL query</strong><small>Any DuckDB query; the file is the table <code>data</code></small></span>
+          </label>
+        </div>
+        <div class="opt-editor" id="opt-where-box" hidden>
+          <label for="opt-where" class="field-label">WHERE</label>
+          <textarea id="opt-where" rows="3" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"
+                    placeholder="region = 'south' AND price > 100"></textarea>
+        </div>
+        <div class="opt-editor" id="opt-sql-box" hidden>
+          <label for="opt-sql" class="field-label">SQL</label>
+          <textarea id="opt-sql" rows="8" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
+        </div>
+        <div class="opt-preview" id="opt-preview-box">
+          <span class="field-label">Runs</span>
+          <code id="opt-preview"></code>
+        </div>
+        <p class="hint" id="opt-engine"></p>
+        </div>
+        <p class="hint" id="opt-unsupported" hidden>Choosing columns and filtering rows work for parquet, CSV and JSON lines files. You can still change how this file is loaded:</p>
+        <div class="opt-settings">
+          <label class="field inline">
+            <span>Memory budget</span>
+            <select id="opt-budget">
+              <option value="50">50 MB</option>
+              <option value="100">100 MB</option>
+              <option value="200">200 MB</option>
+              <option value="500">500 MB</option>
+            </select>
+          </label>
+          <label class="field inline">
+            <span>Index</span>
+            <select id="opt-index">
+              <option value="auto">Auto</option>
+              <option value="first">First column</option>
+              <option value="none">Row numbers</option>
+            </select>
+          </label>
+        </div>
+        <p class="error" id="opt-error" hidden></p>
+      </section>
+    </div>
+    <footer class="dialog-foot">
+      <p class="hint foot-hint" id="opt-foot-hint"></p>
+      <button type="button" class="btn" id="opt-cancel">Cancel</button>
+      <button type="submit" class="btn primary" id="opt-load">Load</button>
+    </footer>
+  </form>
+</dialog>
+
+<iframe id="sandbox" src="sandbox.html" sandbox="allow-scripts" referrerpolicy="no-referrer" title="Python sandbox" hidden></iframe>
+<script src="app.js"></script>
+</body>
+</html>

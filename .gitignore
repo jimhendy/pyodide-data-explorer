@@ -1,0 +1,7 @@
+.venv/
+dist/
+__pycache__/
+.pytest_cache/
+tests/large/
+tests/e2e/artifacts/
+*.pyc
